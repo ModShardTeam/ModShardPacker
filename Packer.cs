@@ -257,7 +257,7 @@ internal static class FilePacker
     {
         IEnumerable<string> files = Directory
             .GetFiles(path, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !IgnoreCompletely(name, file));
+            .Where(file => !IgnoreCompletely(path, file));
         
         Log.Information("Compilation: Gathering files...");
         Diagnostic[] result = RoslynCompile(name, files, new[] { "FNA" }, dllfolder, out code, out pdb);
@@ -283,12 +283,17 @@ internal static class FilePacker
         }
         return true;
     }
-    public static bool IgnoreCompletely(string name, string file)
+    public static bool IgnoreCompletely(string root, string file)
     {
-        string relPath = file.Substring(file.IndexOf("ModSources")).Replace("ModSources\\" + name + "\\", "");
-        return relPath[0] == '.' ||
-            relPath.StartsWith("bin" + Path.DirectorySeparatorChar) ||
-            relPath.StartsWith("obj" + Path.DirectorySeparatorChar);
+        string path_from_root = file.Replace(root + Path.DirectorySeparatorChar.ToString(), "");
+        string[] dirs = path_from_root.Split(Path.DirectorySeparatorChar.ToString()); 
+        
+        string dir = "";
+        if (dirs.Length > 1) // not only a file, but also folders
+        {
+            dir = dirs[0]; // topmost directory
+        }
+        return dir.StartsWith('.') || dir == "bin" || dir == "obj";
     }
 }
 

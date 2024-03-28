@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>ico.ico</ApplicationIcon>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.1.0</Version>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>msp</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
