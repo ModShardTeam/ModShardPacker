@@ -13,6 +13,10 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>zizani</Authors>
+    <PackageTags>msl;cli</PackageTags>
+    <PackageProjectUrl>https://github.com/ModShardTeam/ModShardPacker</PackageProjectUrl>
+    <Description>A cli tool to pack mod source from MSL.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,4 +33,19 @@
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/ModShardTeam/ModShardPacker</RepositoryUrl>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ProjectUrl>https://github.com/ModShardTeam/ModShardPacker</ProjectUrl>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
 </Project>
