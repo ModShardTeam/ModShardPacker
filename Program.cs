@@ -7,6 +7,14 @@ internal static class Program
 {
     static async Task Main(string[] args)
     {
+        Option<string> nameOption = new("--name")
+        {
+            Description = "Name of the output.",
+            IsRequired = false
+        };
+        nameOption.AddAlias("-n");
+        nameOption.SetDefaultValue(null);
+        
         Option<string> folderOption = new("--folder")
         {
             Description = "Folder of the mod code source.",
@@ -28,14 +36,15 @@ internal static class Program
         dllOption.AddAlias("-d");
         dllOption.SetDefaultValue(null);
 
-        RootCommand rootCommand = new("A CLI tool to pack mod code source from MSL.")
+        RootCommand rootCommand = new("A CLI tool to pack mod source from MSL.")
         {
+            nameOption,
             folderOption,
             outputOption,
             dllOption
         };
 
-        rootCommand.SetHandler(MainOperations.MainCommand, folderOption, outputOption, dllOption);
+        rootCommand.SetHandler(MainOperations.MainCommand, nameOption, folderOption, outputOption, dllOption);
 
         CommandLineBuilder commandLineBuilder = new(rootCommand);
 

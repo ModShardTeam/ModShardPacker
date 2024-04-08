@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace ModShardPacker;
 internal static class MainOperations
 {
-    public static async Task MainCommand(string packingFolder, string? outputFolder, string? dllFolder)
+    public static async Task MainCommand(string? name, string packingFolder, string? outputFolder, string? dllFolder)
     {
         dllFolder ??= Environment.CurrentDirectory;
         outputFolder ??= packingFolder;
@@ -22,7 +22,7 @@ internal static class MainOperations
 
         Console.WriteLine($"Packing {packingFolder} in {outputFolder} using dll from {dllFolder}");
         
-        if (FilePacker.Pack(packingFolder, outputFolder, dllFolder))
+        if (FilePacker.Pack(name, packingFolder, outputFolder, dllFolder))
         {
             Console.WriteLine($"Successfully packed {packingFolder}");
         }
@@ -37,17 +37,18 @@ internal static class MainOperations
 
 internal static class FilePacker
 {
-    public static bool Pack(string folderToPack, string outputfolder, string dllfolder)
+    public static bool Pack(string? namePacked, string folderToPack, string outputfolder, string dllfolder)
     {
         Log.Information($"Starting packing {folderToPack}");
 
         DirectoryInfo dir = new(folderToPack);
+        namePacked ??= dir.Name;
         FileInfo[] textures = dir.GetFiles("*.png", SearchOption.AllDirectories);
         FileInfo[] scripts = dir.GetFiles("*.lua", SearchOption.AllDirectories);
         FileInfo[] codes = dir.GetFiles("*.gml", SearchOption.AllDirectories);
         FileInfo[] assemblies = dir.GetFiles("*.asm", SearchOption.AllDirectories);
         int offset = 0;
-        FileStream fs = new(Path.Join(outputfolder, dir.Name + ".sml"), FileMode.Create);
+        FileStream fs = new(Path.Join(outputfolder, namePacked + ".sml"), FileMode.Create);
 
         Write(fs, "MSLM");
         Log.Information("Writting header...");
@@ -129,18 +130,18 @@ internal static class FilePacker
         Log.Information("Writting assemblies...");
 
         Log.Information("Starting compilation...");
-        bool successful = CompileMod(dir.Name, folderToPack, dllfolder, out byte[] code, out _);
+        bool successful = CompileMod(namePacked, folderToPack, dllfolder, out byte[] code, out _);
         if (!successful)
         {
             fs.Close();
             File.Delete(fs.Name);
-            Log.Information($"Failed packing {dir.Name}");
+            Log.Information($"Failed packing {namePacked}");
             return false;
         }
 
         Write(fs, code.Length);
         Write(fs, code);
-        Log.Information($"Successfully packed {dir.Name}");
+        Log.Information($"Successfully packed {namePacked}");
         fs.Close();
 
         return true;
@@ -208,12 +209,12 @@ internal static class FilePacker
         CSharpCompilation comp = CSharpCompilation.Create(name, src, defaultReferences, options);
 
         Log.Information("Compilation: used Assemblies...");
-        foreach(MetadataReference usedAssemblyReferences in comp.GetUsedAssemblyReferences())
+        foreach(string? assemblyReferencesDisplay in comp.GetUsedAssemblyReferences().Select(usedAssemblyReferences => usedAssemblyReferences.Display))
         {
-            if (usedAssemblyReferences.Display != null)
+            if (assemblyReferencesDisplay != null)
             {
-                FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(usedAssemblyReferences.Display);
-                Log.Information($"{{{usedAssemblyReferences.Display}}} {{{fileVersionInfo.FileVersion}}} {{{fileVersionInfo.ProductName}}}");
+                FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assemblyReferencesDisplay);
+                Log.Information($"{{{assemblyReferencesDisplay}}} {{{fileVersionInfo.FileVersion}}} {{{fileVersionInfo.ProductName}}}");
             }
             else
             {
