@@ -10,28 +10,40 @@ using System.Reflection;
 namespace ModShardPacker;
 internal static class MainOperations
 {
-    public static async Task MainCommand(string? name, string packingFolder, string? outputFolder, string? dllFolder)
+    public static async Task MainCommand(string? name, string packingFolder, string? outputFolder, string? dllFolder, bool isVerbose)
     {
         dllFolder ??= Environment.CurrentDirectory;
         outputFolder ??= packingFolder;
 
-        LoggerConfiguration logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.File(string.Format("logs/log_{0}.txt", DateTime.Now.ToString("yyyyMMdd_HHmm")));
+        if (isVerbose)
+        {
+            LoggerConfiguration logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.File(string.Format("logs/log_{0}.txt", DateTime.Now.ToString("yyyyMMdd_HHmm")));
 
-        Log.Logger = logger.CreateLogger();
+            Log.Logger = logger.CreateLogger();
+        }   
+        
 
         Console.WriteLine($"Packing {packingFolder} in {outputFolder} using dll from {dllFolder}");
         
-        if (FilePacker.Pack(name, packingFolder, outputFolder, dllFolder))
+        try
         {
-            Console.WriteLine($"Successfully packed {packingFolder}");
+            if (FilePacker.Pack(name, packingFolder, outputFolder, dllFolder))
+            {
+                Console.WriteLine($"Successfully packed {packingFolder}");
+            }
+            else
+            {
+                Console.WriteLine($"Failed packing {packingFolder}");
+            }
         }
-        else
+        catch(DirectoryNotFoundException ex)
         {
-            Console.WriteLine($"Failed packing {packingFolder}");
+            Console.WriteLine(ex.Message);
+            Log.Error(ex.ToString());
         }
-
+        
         await Log.CloseAndFlushAsync();
     }
 }
@@ -49,6 +61,12 @@ internal static class FilePacker
         FileInfo[] codes = dir.GetFiles("*.gml", SearchOption.AllDirectories);
         FileInfo[] assemblies = dir.GetFiles("*.asm", SearchOption.AllDirectories);
         int offset = 0;
+
+        if (!Directory.Exists(outputfolder))
+        {
+            throw new DirectoryNotFoundException($"Could not find the given output folder '{outputfolder}'");
+        }
+
         FileStream fs = new(Path.Join(outputfolder, namePacked + ".sml"), FileMode.Create);
 
         Write(fs, "MSLM");

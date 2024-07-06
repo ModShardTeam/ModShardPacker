@@ -16,6 +16,11 @@ dotnet tool update --global ModShardPacker --version LastVersionNumber --no-cach
 
 ## Uses
 
+Basic use:
 ```shell
-msp -f path/to/your/mod -n NameOfYourMod -o path/to/the/output -d path/to/the/needed/dll
+msp -f path/to/your/mod -n NameOfYourMod -o path/to/the/output
 ```
+
+> To enable logging output, you can add the `-v` flag.
+
+> You can also specify the location of extra dlls with the `-d` argument.

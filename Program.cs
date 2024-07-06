@@ -35,16 +35,25 @@ internal static class Program
         };
         dllOption.AddAlias("-d");
         dllOption.SetDefaultValue(null);
+        
+        Option<bool> logOption = new("--is-verbose")
+        {
+            Description = "Enable log output into a log file in the cwd.",
+            Arity = ArgumentArity.Zero,
+        };
+        logOption.AddAlias("-v");
+        logOption.SetDefaultValue(false);
 
         RootCommand rootCommand = new("A CLI tool to pack mod source from MSL.")
         {
             nameOption,
             folderOption,
             outputOption,
-            dllOption
+            dllOption,
+            logOption
         };
 
-        rootCommand.SetHandler(MainOperations.MainCommand, nameOption, folderOption, outputOption, dllOption);
+        rootCommand.SetHandler(MainOperations.MainCommand, nameOption, folderOption, outputOption, dllOption, logOption);
 
         CommandLineBuilder commandLineBuilder = new(rootCommand);
 
