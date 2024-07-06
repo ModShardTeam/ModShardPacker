@@ -33,6 +33,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="UndertaleModLib">
+      <HintPath>lib\UndertaleModLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ModShardLauncher">
+      <HintPath>lib\ModShardLauncher.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="icon.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 

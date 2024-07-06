@@ -14,7 +14,7 @@ public static class Utils
     {
         if (argument is null)
         {
-            Log.Error(string.Format("{0} is null.", argument));
+            Log.Error("{0} is null.", argument);
             throw new ArgumentNullException(paramName, message);
         }
         else
@@ -30,7 +30,7 @@ public static class Utils
     {
         if (argument is null)
         {
-            Log.Error(string.Format("{0} is null.", argument));
+            Log.Error("{0} is null.", argument);
             throw new ArgumentNullException(paramName, message);
         }
         else

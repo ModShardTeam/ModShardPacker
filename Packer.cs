@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection;
 
 namespace ModShardPacker;
 internal static class MainOperations
@@ -39,7 +40,7 @@ internal static class FilePacker
 {
     public static bool Pack(string? namePacked, string folderToPack, string outputfolder, string dllfolder)
     {
-        Log.Information($"Starting packing {folderToPack}");
+        Log.Information("Starting packing {0}", folderToPack);
 
         DirectoryInfo dir = new(folderToPack);
         namePacked ??= dir.Name;
@@ -55,7 +56,7 @@ internal static class FilePacker
 
         // work around to find the FileVersion of ModShardLauncher.dll for single file publishing
         // see: https://github.com/dotnet/runtime/issues/13051
-        string mod_version = "v" + FileVersionInfo.GetVersionInfo(Path.Join(dllfolder, "ModShardLauncher.dll")).FileVersion;
+        string mod_version = "v" + FileVersionInfo.GetVersionInfo(typeof(ModShardLauncher.Mods.Mod).Assembly.Location).FileVersion;
         
         Write(fs, mod_version);
         Log.Information("Writting version...");
@@ -135,13 +136,13 @@ internal static class FilePacker
         {
             fs.Close();
             File.Delete(fs.Name);
-            Log.Information($"Failed packing {namePacked}");
+            Log.Information("Failed packing {0}", namePacked);
             return false;
         }
 
         Write(fs, code.Length);
         Write(fs, code);
-        Log.Information($"Successfully packed {namePacked}");
+        Log.Information("Successfully packed {0}", namePacked);
         fs.Close();
 
         return true;
@@ -179,14 +180,38 @@ internal static class FilePacker
         stream.Close();
         return len;
     }
+    public static List<MetadataReference> GetSystemMetadataReferences()
+    {
+        string trustedAssemblies = (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string)!;
+        string[] trustedList = trustedAssemblies.Split(';');
+        List<string> required = new()
+        {
+            "System.Runtime.dll",
+            "System.Linq.dll",
+            "System.ObjectModel.dll",
+            "System.Collections.dll",
+            "System.Private.CoreLib.dll",
+            "System.Text.RegularExpressions.dll"
+        };
+        IEnumerable<string> filteredPath = trustedList.Where(p => required.Exists(r => p.Contains(r)));
+        return filteredPath.Select(x => MetadataReference.CreateFromFile(x) as MetadataReference).ToList();
+    }
     public static Diagnostic[] RoslynCompile(string name, IEnumerable<string> files, IEnumerable<string> preprocessorSymbols, string dllfolder, out byte[] code, out byte[] pdb)
     {
-        // creating default namespaces
-        IEnumerable<string> DefaultNamespaces = new[] { "System.Collections.Generic" };
-
+        NameSyntax[] qualifiedNames = {
+            SyntaxFactory.ParseName("System"),
+            SyntaxFactory.ParseName("System.Linq"),
+            SyntaxFactory.ParseName("System.Collections"),
+            SyntaxFactory.ParseName("System.Collections.Generic"),
+            SyntaxFactory.ParseName("System.Runtime")
+        };
         // creating compilation options
-        CSharpCompilationOptions options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: true, optimizationLevel: OptimizationLevel.Release, allowUnsafe: false)
-            .WithUsings(DefaultNamespaces);
+        CSharpCompilationOptions options = new(
+            OutputKind.DynamicallyLinkedLibrary, 
+            checkOverflow: true, 
+            optimizationLevel: OptimizationLevel.Release, 
+            allowUnsafe: false
+        );
 
         // creating parse options
         CSharpParseOptions parseOptions = new(LanguageVersion.Preview, preprocessorSymbols: preprocessorSymbols);
@@ -195,16 +220,23 @@ internal static class FilePacker
         EmitOptions emitOptions = new(debugInformationFormat: DebugInformationFormat.PortablePdb);
 
         // convert string of dll into MetadataReference
-        List<MetadataReference> defaultReferences = Directory.GetFiles(dllfolder, "*.dll")
-            .ToList()
-            .ConvertAll(
-                new Converter<string, MetadataReference>(delegate(string str) { return MetadataReference.CreateFromFile(str); })
-            );
-
+        IEnumerable<MetadataReference> defaultReferences = Directory.GetFiles(dllfolder, "*.dll")
+            .Select(x => MetadataReference.CreateFromFile(x));
+        
         // add more references
-        defaultReferences.AddRange(new List<MetadataReference>() { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) });
+        Type[] neededType = { 
+            typeof(UndertaleModLib.Models.UndertaleCode), 
+            typeof(ModShardLauncher.Mods.Mod)
+        };
+        defaultReferences = defaultReferences
+            .Concat(neededType.Select(x => MetadataReference.CreateFromFile(x.Assembly.Location)))
+            .Concat(GetSystemMetadataReferences());
 
         IEnumerable<SyntaxTree> src = files.Select(f => SyntaxFactory.ParseSyntaxTree(File.ReadAllText(f), parseOptions, f, Encoding.UTF8));
+        // update tree before compilation to add needed using
+        src = src.Select(tree => (tree.GetRoot() as CompilationUnitSyntax)!
+            .AddUsings(qualifiedNames.Select(qualifiedNameSpace => SyntaxFactory.UsingDirective(qualifiedNameSpace)).ToArray()).NormalizeWhitespace().SyntaxTree);
+
         Log.Information("Compilation: Writting ast...");
         CSharpCompilation comp = CSharpCompilation.Create(name, src, defaultReferences, options);
 
@@ -214,13 +246,12 @@ internal static class FilePacker
             if (assemblyReferencesDisplay != null)
             {
                 FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assemblyReferencesDisplay);
-                Log.Information($"{{{assemblyReferencesDisplay}}} {{{fileVersionInfo.FileVersion}}} {{{fileVersionInfo.ProductName}}}");
+                Log.Information("{{{0}}} {{{1}}} {{{2}}}", assemblyReferencesDisplay, fileVersionInfo.FileVersion, fileVersionInfo.ProductName);
             }
             else
             {
                 Log.Error("Cannot find the assembly");
             }
-            
         }
 
         foreach(SyntaxTree tree in comp.SyntaxTrees)
