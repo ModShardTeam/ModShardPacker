@@ -201,7 +201,7 @@ internal static class FilePacker
     public static List<MetadataReference> GetSystemMetadataReferences()
     {
         string trustedAssemblies = (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string)!;
-        string[] trustedList = trustedAssemblies.Split(';');
+        string[] trustedList = trustedAssemblies.Split(Path.PathSeparator);
         List<string> required = new()
         {
             "System.Runtime.dll",
